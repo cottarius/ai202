@@ -14,10 +14,10 @@ import org.springframework.ai.image.ImagePrompt;
 import org.springframework.ai.image.ImageResponse;
 import org.springframework.ai.model.Media;
 import org.springframework.ai.openai.OpenAiAudioSpeechModel;
+import org.springframework.ai.openai.audio.speech.SpeechModel;
 import org.springframework.ai.openai.audio.speech.SpeechPrompt;
 import org.springframework.ai.openai.audio.speech.SpeechResponse;
 import org.springframework.ai.reader.tika.TikaDocumentReader;
-import org.springframework.ai.vectorstore.SearchRequest;
 import org.springframework.ai.vectorstore.VectorStore;
 import org.springframework.core.io.FileSystemResource;
 import org.springframework.core.io.UrlResource;
@@ -36,7 +36,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 public class Ai202Controller {
     private final Logger logger = LoggerFactory.getLogger(this.getClass());
     private final ChatClient client;
-    private final OpenAiAudioSpeechModel speechModel;
+    private final SpeechModel speechModel;
     private final VectorStore vectorStore;
     private final ImageModel imageModel;
 
@@ -90,7 +90,7 @@ public class Ai202Controller {
     public String getRagResponseFromOurData(@RequestParam(defaultValue = "Airspeeds") String message) {
         return client.prompt()
                 .user(message)
-                .advisors(new QuestionAnswerAdvisor(vectorStore, SearchRequest.defaults()))
+                .advisors(new QuestionAnswerAdvisor(vectorStore))
                 .call()
                 .content();
     }
@@ -101,13 +101,13 @@ public class Ai202Controller {
        Why do I think what?
     */
     @GetMapping("/conversation")
-    public ChatResponse getConversation(@RequestParam(defaultValue = "What is the meaning of life?") String message,
+    public String getConversation(@RequestParam(defaultValue = "What is the meaning of life?") String message,
                                         @RequestParam(defaultValue = "default") String conversationId) {
         return client.prompt()
                 .user(message)
                 .advisors(as -> as.param(AbstractChatMemoryAdvisor.CHAT_MEMORY_CONVERSATION_ID_KEY, conversationId))
                 .call()
-                .chatResponse();
+                .content();
     }
 
     @GetMapping("/translate")
@@ -165,8 +165,8 @@ public class Ai202Controller {
 
         var counter = new AtomicInteger(1);
         for (Document doc : documents) {
-            logger.info(String.format("Processing document %d, %d characters.", counter.get(), doc.getContent().length()));
-            convertToSpeech(doc.getContent(),
+            logger.info(String.format("Processing document %d, %d characters.", counter.get(), doc.getFormattedContent().length()));
+            convertToSpeech(doc.getFormattedContent(),
                     String.format("%s/%s_%d.mp3", DIR_OUT, infile, counter.getAndIncrement()));
         }
 
