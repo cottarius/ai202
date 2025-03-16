@@ -74,13 +74,8 @@ public class Ai202Controller {
     @GetMapping("/template")
     public String getTemplateResponse(@RequestParam String type,
                                       @RequestParam String topic) {
-        /*// Can do this a bit differently, dealer's choice
-        var template = new PromptTemplate("Write a {type} about {topic}.",
-                Map.of("type", type, "topic", topic));
-        return client.prompt(template.create()).call().content();*/
-
         return client.prompt()
-                .user(u -> u.text("Write a {type} about {topic}.")
+                .user(u -> u.text("Write a {type} about {topic}, 1000 word limit.")
                         .param("type", type).param("topic", topic))
                 .call()
                 .content();
