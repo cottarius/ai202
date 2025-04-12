@@ -1,0 +1,15 @@
+version: '3.8'
+
+services:
+  qdrant:
+    image: qdrant/qdrant
+    container_name: qdrant
+    ports:
+      - "6334:6334"  # Порт для gRPC и HTTP API
+      - "6333:6333"  # (Опционально) Порт для Web UI (если нужен)
+    volumes:
+      - qdrant_data:/qdrant/storage  # Сохраняет данные между перезапусками
+    restart: unless-stopped  # Автоперезапуск при падении
+
+volumes:
+  qdrant_data:  # Именованный том для хранения данных

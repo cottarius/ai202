@@ -40,13 +40,15 @@ public class Ai202Controller {
     private final VectorStore vectorStore;
     private final ImageModel imageModel;
 
-    private static final String DIR_IN = "/Users/markheckler/files/in";
-    private static final String DIR_OUT = "/Users/markheckler/files/out";
+    private static final String DIR_IN = "/Users/olegprokopenko/files/in";
+    private static final String DIR_OUT = "/Users/olegprokopenko/files/out";
 
     public Ai202Controller(ChatClient.Builder builder, OpenAiAudioSpeechModel speechModel, VectorStore vectorStore, ImageModel imageModel) {
         // We'll revisit this later. This is going to be legen...wait for it...
         //this.client = builder.build(); ...DARY!
-        this.client = builder.defaultAdvisors(
+        this.client = builder
+                .defaultSystem(s -> s.text("Отвечай строго на русском языке. Будь вежливым и используй правильную грамматику."))
+                .defaultAdvisors(
                         new MessageChatMemoryAdvisor(new InMemoryChatMemory(), "default", 10))
                 .build();
 
@@ -56,16 +58,18 @@ public class Ai202Controller {
     }
 
     @GetMapping
-    public String getString(@RequestParam(defaultValue = "What is the meaning of life?") String message) {
+    public String getString(@RequestParam(defaultValue = "В чем смысл жизни?") String message) {
         return client.prompt()
+                .system("Отвечай на русском языке")
                 .user(message)
                 .call()
                 .content();
     }
 
     @GetMapping("/response")
-    public ChatResponse getResponse(@RequestParam(defaultValue = "What is the meaning of life?") String message) {
+    public ChatResponse getResponse(@RequestParam(defaultValue = "В чем смысл жизни?") String message) {
         return client.prompt()
+                .system("Отвечай на русском языке")
                 .user(message)
                 .call()
                 .chatResponse();
@@ -84,6 +88,7 @@ public class Ai202Controller {
     @GetMapping("/rag")
     public String getRagResponseFromOurData(@RequestParam(defaultValue = "Airspeeds") String message) {
         return client.prompt()
+                .system("Отвечай на русском языке на основе предоставленных документов")
                 .user(message)
                 .advisors(new QuestionAnswerAdvisor(vectorStore))
                 .call()
@@ -96,7 +101,7 @@ public class Ai202Controller {
        Why do I think what?
     */
     @GetMapping("/conversation")
-    public String getConversation(@RequestParam(defaultValue = "What is the meaning of life?") String message,
+    public String getConversation(@RequestParam(defaultValue = "В чем смысл жизни?") String message,
                                         @RequestParam(defaultValue = "default") String conversationId) {
         return client.prompt()
                 .user(message)
@@ -106,7 +111,7 @@ public class Ai202Controller {
     }
 
     @GetMapping("/translate")
-    public String getTranslation(@RequestParam(defaultValue = "What is the meaning of life?") String message,
+    public String getTranslation(@RequestParam(defaultValue = "В чем смысл жизни?") String message,
                                  @RequestParam(defaultValue = "English") String language,
                                  @RequestParam(defaultValue = "false") boolean save) throws IOException {
         var content = client.prompt()
@@ -137,6 +142,7 @@ public class Ai202Controller {
 
             SpeechResponse response = speechModel.call(new SpeechPrompt(textToSpeech));
             outputStream.write(response.getResult().getOutput());
+            logger.info("Speech response record saved: {}", outputDest);
         }
 
         fsr.getOutputStream().write(outputStream.toByteArray());
@@ -171,7 +177,7 @@ public class Ai202Controller {
 
     @GetMapping("/mm")
     public String getImageDescription(@RequestParam(defaultValue = DIR_IN + "/testimage.jpg") String imagePath,
-                                      @RequestParam(defaultValue = "What is in this image?") String message) throws MalformedURLException {
+                                      @RequestParam(defaultValue = "Что изображено на этой картинке?") String message) throws MalformedURLException {
         // For sample URL, try this (courtesy of Spring AI docs): "https://docs.spring.io/spring-ai/reference/1.0-SNAPSHOT/_images/multimodal.test.png"
         // For sample local file, provide full filepath
         // Keeping it simple, only accept JPEGs and PNGs
@@ -181,6 +187,7 @@ public class Ai202Controller {
                 new Media(imageType, new FileSystemResource(imagePath)));
 
         return client.prompt()
+                .system("Отвечай на русском языке")
                 .user(c -> c.text(message).media(media))
                 .call()
                 .content();
