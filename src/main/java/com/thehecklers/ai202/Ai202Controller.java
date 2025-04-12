@@ -35,7 +35,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 @RestController
 public class Ai202Controller {
     private final Logger logger = LoggerFactory.getLogger(this.getClass());
-    private final ChatClient client;
+    private final ChatClient chatClient;
     private final SpeechModel speechModel;
     private final VectorStore vectorStore;
     private final ImageModel imageModel;
@@ -46,7 +46,7 @@ public class Ai202Controller {
     public Ai202Controller(ChatClient.Builder builder, OpenAiAudioSpeechModel speechModel, VectorStore vectorStore, ImageModel imageModel) {
         // We'll revisit this later. This is going to be legen...wait for it...
         //this.client = builder.build(); ...DARY!
-        this.client = builder
+        this.chatClient = builder
                 .defaultSystem(s -> s.text("Отвечай строго на русском языке. Будь вежливым и используй правильную грамматику."))
                 .defaultAdvisors(
                         new MessageChatMemoryAdvisor(new InMemoryChatMemory(), "default", 10))
@@ -59,7 +59,7 @@ public class Ai202Controller {
 
     @GetMapping
     public String getString(@RequestParam(defaultValue = "В чем смысл жизни?") String message) {
-        return client.prompt()
+        return chatClient.prompt()
                 .system("Отвечай на русском языке")
                 .user(message)
                 .call()
@@ -68,7 +68,7 @@ public class Ai202Controller {
 
     @GetMapping("/response")
     public ChatResponse getResponse(@RequestParam(defaultValue = "В чем смысл жизни?") String message) {
-        return client.prompt()
+        return chatClient.prompt()
                 .system("Отвечай на русском языке")
                 .user(message)
                 .call()
@@ -78,7 +78,7 @@ public class Ai202Controller {
     @GetMapping("/template")
     public String getTemplateResponse(@RequestParam String type,
                                       @RequestParam String topic) {
-        return client.prompt()
+        return chatClient.prompt()
                 .user(u -> u.text("Write a {type} about {topic}, 1000 word limit.")
                         .param("type", type).param("topic", topic))
                 .call()
@@ -87,7 +87,7 @@ public class Ai202Controller {
 
     @GetMapping("/rag")
     public String getRagResponseFromOurData(@RequestParam(defaultValue = "Airspeeds") String message) {
-        return client.prompt()
+        return chatClient.prompt()
                 .system("Отвечай на русском языке на основе предоставленных документов")
                 .user(message)
                 .advisors(new QuestionAnswerAdvisor(vectorStore))
@@ -103,7 +103,7 @@ public class Ai202Controller {
     @GetMapping("/conversation")
     public String getConversation(@RequestParam(defaultValue = "В чем смысл жизни?") String message,
                                         @RequestParam(defaultValue = "default") String conversationId) {
-        return client.prompt()
+        return chatClient.prompt()
                 .user(message)
                 .advisors(as -> as.param(AbstractChatMemoryAdvisor.CHAT_MEMORY_CONVERSATION_ID_KEY, conversationId))
                 .call()
@@ -114,7 +114,7 @@ public class Ai202Controller {
     public String getTranslation(@RequestParam(defaultValue = "В чем смысл жизни?") String message,
                                  @RequestParam(defaultValue = "English") String language,
                                  @RequestParam(defaultValue = "false") boolean save) throws IOException {
-        var content = client.prompt()
+        var content = chatClient.prompt()
                 .user(message)
                 .system(s -> s.text("You respond in {language}").param("language", language))
                 .call()
@@ -186,7 +186,7 @@ public class Ai202Controller {
                 new Media(imageType, new URL(imagePath)) :
                 new Media(imageType, new FileSystemResource(imagePath)));
 
-        return client.prompt()
+        return chatClient.prompt()
                 .system("Отвечай на русском языке")
                 .user(c -> c.text(message).media(media))
                 .call()
